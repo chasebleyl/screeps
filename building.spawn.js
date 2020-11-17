@@ -3,8 +3,8 @@ var buildingController = require('building.controller');
 var ROLES = {
     harvester: {
         name: 'harvester',
-        target: 2,
-        body: [WORK,CARRY,MOVE,MOVE],
+        target: 1,
+        body: [WORK,CARRY,CARRY,MOVE,MOVE],
         directions: [RIGHT,TOP_RIGHT]
     },
     miner: {
@@ -21,14 +21,14 @@ var ROLES = {
     },
     builder: {
         name: 'builder',
-        target: 2,
+        target: 0,
         body: [WORK,WORK,CARRY,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     },
     upgrader: {
         name: 'upgrader',
         target: 1,
-        body: [WORK,WORK,CARRY,MOVE],
+        body: [WORK,CARRY,CARRY,MOVE,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     },
     repairer: {
@@ -74,7 +74,7 @@ var buildingSpawn = {
         return cost;
     },
 
-    spawnHarvester: function(role, sourceId) {
+    spawnCreep: function(role, sourceId = null) {
         var creepName = role.name + Game.time;
         var attributes = role.body;
         var options = {
@@ -132,8 +132,18 @@ var buildingSpawn = {
                 && buildingSpawn.getAvailableEnergy() >= buildingSpawn.calculateBodyEnergyCost(ROLES.harvester.body) 
             ) {
                 console.log("Going to spawn a harvester with sourceId=" + source.id);
-                buildingSpawn.spawnHarvester(ROLES.harvester, source.id);
+                buildingSpawn.spawnCreep(ROLES.harvester, source.id);
             }
+        }
+
+        var upgraderCount = buildingSpawn.creepCountByRole(ROLES.upgrader);
+        if (
+            !buildingSpawn.isSpawning() 
+            && upgraderCount < ROLES.upgrader.target
+            && buildingSpawn.getAvailableEnergy() >= buildingSpawn.calculateBodyEnergyCost(ROLES.upgrader.body) 
+        ) {
+            console.log("Going to spawn an upgrader");
+            buildingSpawn.spawnCreep(ROLES.upgrader);
         }
 
         if (Game.spawns['Spawn1'].spawning) {
