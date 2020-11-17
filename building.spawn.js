@@ -27,7 +27,7 @@ var ROLES = {
     },
     upgrader: {
         name: 'upgrader',
-        target: 1,
+        target: 2,
         body: [WORK,CARRY,CARRY,MOVE,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     },
@@ -136,7 +136,7 @@ var buildingSpawn = {
             }
         }
 
-        var upgraderCount = buildingSpawn.creepCountByRole(ROLES.upgrader);
+        var upgraderCount = buildingSpawn.creepCountByRole(ROLES.upgrader.name);
         if (
             !buildingSpawn.isSpawning() 
             && upgraderCount < ROLES.upgrader.target
