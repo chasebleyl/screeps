@@ -1,39 +1,40 @@
 var buildingController = require('building.controller');
 
+var HOME_BASE_ID = "W42N34";
 var ROLES = {
     harvester: {
         name: 'harvester',
-        target: 1,
+        target: 0,
         body: [WORK,CARRY,CARRY,MOVE,MOVE],
         directions: [RIGHT,TOP_RIGHT]
     },
     miner: {
         name: 'miner',
-        target: 0,
+        target: 1,
         body: [WORK,WORK,MOVE,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     },
     transporter: {
         name: 'transporter',
-        target: 0,
+        target: 2,
         body: [WORK,CARRY,CARRY,MOVE,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     },
     builder: {
         name: 'builder',
-        target: 0,
+        target: 3,
         body: [WORK,WORK,CARRY,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     },
     upgrader: {
         name: 'upgrader',
-        target: 2,
+        target: 3,
         body: [WORK,CARRY,CARRY,MOVE,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     },
     repairer: {
         name: 'repairer',
-        target: 0,
+        target: 1,
         body: [WORK,CARRY,MOVE,MOVE,MOVE],
         directions: [LEFT,BOTTOM_LEFT,TOP_LEFT]
     }
@@ -118,11 +119,45 @@ var buildingSpawn = {
         return false;
     },
 
-    cycle: function() {
-        buildingSpawn.clearDeadCreepMemory();
+    spawnWithSourceInMemory: function(role) {
+        var allSources = Game.rooms[HOME_BASE_ID].find(FIND_SOURCES);
+        for (var i = 0; i < allSources.length; i++) {
+            var source = allSources[i];
+            var assignedCreeps = _.filter(Game.creeps, i => {
+                return i.memory.role == role.name && i.memory.sourceId === source.id;
+            });
+            if (
+                !buildingSpawn.isSpawning() 
+                && assignedCreeps.length < role.target
+                && buildingSpawn.getAvailableEnergy() >= buildingSpawn.calculateBodyEnergyCost(role.body) 
+            ) {
+                console.log("Going to spawn a " + role.name +" with sourceId=" + source.id);
+                return buildingSpawn.spawnCreep(role, source.id);
+            }
+        }
+        return false;
+    },
 
-        var roomId = "W42N34";
-        var allSources = Game.rooms[roomId].find(FIND_SOURCES);
+    attemptMinerSpawn: function() {
+        var allSources = Game.rooms[HOME_BASE_ID].find(FIND_SOURCES);
+        for (var i = 0; i < allSources.length; i++) {
+            var source = allSources[i];
+            var assignedMiners = _.filter(Game.creeps, i => {
+                return i.memory.role == ROLES.miner.name && i.memory.sourceId === source.id;
+            });
+            if (
+                !buildingSpawn.isSpawning() 
+                && assignedMiners.length < ROLES.miner.target
+                && buildingSpawn.getAvailableEnergy() >= buildingSpawn.calculateBodyEnergyCost(ROLES.miner.body) 
+            ) {
+                console.log("Going to spawn a miner with sourceId=" + source.id);
+                buildingSpawn.spawnCreep(ROLES.miner, source.id);
+            }
+        }
+    },
+
+    attemptHarvesterSpawn: function() {
+        var allSources = Game.rooms[HOME_BASE_ID].find(FIND_SOURCES);
         for (var i = 0; i < allSources.length; i++) {
             var source = allSources[i];
             var assignedHarvesters = _.filter(Game.creeps, i => i.memory.sourceId === source.id);
@@ -135,7 +170,34 @@ var buildingSpawn = {
                 buildingSpawn.spawnCreep(ROLES.harvester, source.id);
             }
         }
+    },
 
+    spawnBasic: function(role) {
+        var creepCount = buildingSpawn.creepCountByRole(role.name);
+        if (
+            !buildingSpawn.isSpawning() 
+            && creepCount < role.target
+            && buildingSpawn.getAvailableEnergy() >= buildingSpawn.calculateBodyEnergyCost(role.body) 
+        ) {
+            console.log("Going to spawn a " + role.name);
+            return buildingSpawn.spawnCreep(role);
+        }
+        return false;
+    },
+
+    attemptTransporterSpawn: function() {
+        var transporterCount = buildingSpawn.creepCountByRole(ROLES.transporter.name);
+        if (
+            !buildingSpawn.isSpawning() 
+            && transporterCount < ROLES.transporter.target
+            && buildingSpawn.getAvailableEnergy() >= buildingSpawn.calculateBodyEnergyCost(ROLES.transporter.body) 
+        ) {
+            console.log("Going to spawn an transporter");
+            buildingSpawn.spawnCreep(ROLES.transporter);
+        }
+    },
+
+    attemptUpgraderSpawn: function() {
         var upgraderCount = buildingSpawn.creepCountByRole(ROLES.upgrader.name);
         if (
             !buildingSpawn.isSpawning() 
@@ -144,6 +206,36 @@ var buildingSpawn = {
         ) {
             console.log("Going to spawn an upgrader");
             buildingSpawn.spawnCreep(ROLES.upgrader);
+        }
+    },
+
+    attemptBuilderSpawn: function() {
+        var builderCount = buildingSpawn.creepCountByRole(ROLES.builder.name);
+        if (
+            !buildingSpawn.isSpawning() 
+            && builderCount < ROLES.builder.target
+            && buildingSpawn.getAvailableEnergy() >= buildingSpawn.calculateBodyEnergyCost(ROLES.builder.body) 
+        ) {
+            console.log("Going to spawn a builder");
+            buildingSpawn.spawnCreep(ROLES.builder);
+        }
+    },
+
+    cycle: function() {
+        buildingSpawn.clearDeadCreepMemory();
+
+        if (buildingSpawn.spawnWithSourceInMemory(ROLES.harvester)) {
+            console.log("Spawned harvester");
+        } else if (buildingSpawn.spawnWithSourceInMemory(ROLES.miner)) {
+            console.log("Spawned miner");
+        } else if (buildingSpawn.spawnBasic(ROLES.transporter)) {
+            console.log("Spawned transporter");
+        } else if (buildingSpawn.spawnBasic(ROLES.upgrader)) {
+            console.log("Spawned upgrader");
+        } else if (buildingSpawn.spawnBasic(ROLES.builder)) {
+            console.log("Spawned builder");
+        } else if (buildingSpawn.spawnBasic(ROLES.repairer)) {
+            console.log("Spawned repairer");
         }
 
         if (Game.spawns['Spawn1'].spawning) {
